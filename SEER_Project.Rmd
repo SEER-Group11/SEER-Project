@@ -1,0 +1,51 @@
+---
+title: "SEER Project"
+author: "Group 11"
+date: "2021/4/22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(readxl)
+
+```
+
+```{r}
+seer<-read.csv("SEER File delete.csv")
+raw_d<-read.csv("raw delete column.csv")
+
+
+data_full<-cbind(seer,raw_d)
+data_full<-data_full%>%filter(Size!="Blank(s)")
+
+data_full$Survival.months<-as.numeric(data_full$Survival.months)
+data_full$Size<-as.numeric(data_full$Size)
+
+data_full$size_range <-cut(data_full$Size, 
+    breaks = c(-Inf, 30, 60, Inf), right = FALSE, labels = c("0~3","3~6", "6+"))
+
+
+dead<-data_full%>%filter(data_full$SEER.cause.specific.death.classification=="Dead (attributable to this cancer dx)", data_full$Survival.months!="Unknown")
+summary(dead)
+
+#ggplot(data=dead,aes(Year.of.diagnosis,Survival.months))  + geom_point(aes(color=factor(size_range)),size=2,alpha=0.2)+geom_smooth(color='tomato3',se=FALSE,alpha=0.2)+theme_bw()
+  
+
+#boxplot(dead$Survival.months~dead$size_range,xlab="Size Range",ylab="Survival Months",main="Year of diagnosis vs. Survival months")
+
+#write.csv(dead, file = "dead.csv")
+
+```
+
+```{r}
+#5 year survival months
+dead_5<-dead%>%filter(dead$Year.of.diagnosis<=2012,dead$Survival.months<=60)
+
+ggplot(data=dead_5,aes(Year.of.diagnosis,Survival.months))  + geom_point(aes(color=factor(size_range)),size=2,alpha=0.2)+geom_smooth(color='tomato3',se=FALSE,alpha=0.2)+theme_bw()
+  
+boxplot(dead_5$Survival.months~dead_5$size_range,xlab="Size Range",ylab="Survival Months",main="Year of diagnosis vs. Survival months")
+
+```
