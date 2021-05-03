@@ -18,6 +18,11 @@ library(tensorflow)
 library(caret)
 library(naniar)
 library(knitr)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+library(stats)
+library(reshape2)
 ```
 
 ```{r}
@@ -172,12 +177,11 @@ ggplot(data, aes(x=Site.x, y=Size.x, fill=Site.x)) + geom_jitter(aes(colour=Site
 # MARY EDA
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(ggplot2)
-library(tidyverse)
+
 ```
 
 ```{r}
-library(readr)
+
 seer_data_fullm <- read_csv("C:/Users/49431/Downloads/seer_data_full.csv")
 head(seer_data_fullm)
 ```
@@ -264,7 +268,7 @@ Shown in below is a correlation map for the  data that describes the relationshi
 
 ```{r heatmap}
 
-library(readr)
+
 df_53 <- read_csv("C:/Users/49431/Downloads/df_53.csv")
 head(df_53)
 
@@ -272,7 +276,7 @@ df_53 = df_53%>% mutate_if(is.character,as.factor)
 df_53= as.data.frame(df_53)
 df_53 = sapply(df_53,unclass)%>%as.data.frame()
 
-library(reshape2)
+
 #heatmap plot year3
 temp3 = df_53[2:34]
 cormat <- round(cor(temp3),2)
@@ -430,7 +434,8 @@ testm <- datam[-train_ind, ]
 ##Logistic Regression
 
 ```{r}
-library(stats)
+
+
 ## make the model with Logistic 
 lg<-glm(survive2y~.,family=binomial(link='logit'),data=trainm)
 #summary(lg)
