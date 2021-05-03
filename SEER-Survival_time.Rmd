@@ -7,9 +7,156 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(scales)
 ```
 
 ```{r}
 data<-read.csv(file="seer_data_full.csv")
+```
+
+```{r}
+#EDA
+
+## SITE
+#median month
+data %>% 
+group_by(Site.x) %>% 
+summarise(AverageSurvivalMonth = median(Survival.months)) %>% 
+  ggplot(aes(factor(Site.x), AverageSurvivalMonth, label=AverageSurvivalMonth, fill=factor(Site.x))) +
+  geom_col() +
+  geom_text(nudge_y = 0.5)
+
+hist(data2$survive2y)
+
+#REGION
+ggplot(data, 
+       aes(x = Site.x, 
+           fill = SEERRegistry)) + 
+  geom_bar(position = "stack")
+
+ggplot(data, aes(Site.x))+
+  geom_bar(aes(fill=SEERRegistry), position="fill")
+
+#AGE
+ggplot(data, aes(Site.x))+
+  geom_bar(aes(fill=age_range), position="fill")
+
+#race
+ggplot(data, aes(Site.x))+
+  geom_bar(aes(fill=Race.x), position="fill")
+
+#survive 2 years
+ggplot(data, aes(Site.x))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")
+
+ggplot(data, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")
+
+ggplot(data, aes(age_range))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")
+
+ggplot(data, aes(size_range))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")
+
+ggplot(data,aes(x=Size.x,fill=as.factor(survive2y),color=as.factor(survive2y),group=as.factor(survive2y)))+
+  geom_histogram(aes(y = ..density..), alpha = 0.4,position = position_dodge())+
+  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F) 
+
+ggplot(data,aes(x=AgeatDiagnosis,fill=as.factor(survive2y),color=as.factor(survive2y),group=as.factor(survive2y)))+
+  geom_histogram(aes(y = ..density..), alpha = 0.4,position = position_dodge())+
+  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F)
+
+#DISCRIMIMATION
+data$surgery_recommendation<-ifelse(data$Surgery.Decision=="Not recommended"|data$Surgery.Decision=="Not recommended, contraindicated due to other cond; autopsy only (1973-2002)",0,1)
+
+plotdata <- data %>%
+  group_by(Race.x, surgery_recommendation) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+
+ggplot(plotdata, aes(Race.x,pct,fill=as.factor(surgery_recommendation)))+
+  geom_bar(stat = "identity",
+           position = "fill") +
+  geom_text(aes(label = lbl), 
+            size = 3, 
+            position = position_stack(vjust = 0.5))
+
+##less than 2 years compare more than 2 years
+data0<-data%>%filter(survive2y==0)
+data1<-data%>%filter(survive2y==1)
+
+#race
+ggplot(data0, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+
+ggplot(data1, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+
+#size
+ggplot() +
+  geom_density(aes(Size.x, fill = "dead_within_2_years"), alpha = .2, data = data0) +
+  geom_density(aes(Size.x, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
+
+#sex
+ggplot() +
+  geom_bar(aes(Sex.x, fill = "dead_within_2_years",color="black"), alpha = .2, data = data0) +
+  geom_bar(aes(Sex.x, fill = "survive_more_than_2_years",color="black"), alpha = .2, data = data1) +
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
+
+#region
+plotdata <- data0 %>%
+  count(SEERRegistry) %>%
+  mutate(pct = n / sum(n),
+         pctlabel = paste0(round(pct*100), "%"))
+
+
+ggplot(plotdata, 
+       aes(x = reorder(SEERRegistry, -pct),
+           y = pct)) + 
+  geom_bar(stat = "identity", 
+           fill = "indianred3", 
+           color = "black") +
+  geom_text(aes(label = pctlabel), 
+            vjust = -0.25) +
+  scale_y_continuous(labels = percent) +
+  labs(x = "Region", 
+       y = "Percent", 
+       title  = "Percent by region")
+
+plotdata1 <- data1 %>%
+  count(SEERRegistry) %>%
+  mutate(pct = n / sum(n),
+         pctlabel = paste0(round(pct*100), "%"))
+
+
+ggplot(plotdata1, 
+       aes(x = reorder(SEERRegistry, -pct),
+           y = pct)) + 
+  geom_bar(stat = "identity", 
+           fill = "indianred3", 
+           color = "black") +
+  geom_text(aes(label = pctlabel), 
+            vjust = -0.25) +
+  scale_y_continuous(labels = percent) +
+  labs(x = "Region", 
+       y = "Percent", 
+       title  = "Percent by region")
+
+#age
+ggplot(data0, aes(age_range))+
+  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+
+ggplot(data1, aes(age_range))+
+  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+
+ggplot() +
+  geom_density(aes(AgeatDiagnosis, fill = "dead_within_2_years"), alpha = .2, data = data0) +
+  geom_density(aes(AgeatDiagnosis, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
 ```
 
