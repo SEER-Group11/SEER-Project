@@ -30,8 +30,6 @@ summarise(AverageSurvivalMonth = median(Survival.months)) %>%
   geom_col() +
   geom_text(nudge_y = 0.5)
 
-hist(data2$survive2y)
-
 #REGION
 ggplot(data, 
        aes(x = Site.x, 
