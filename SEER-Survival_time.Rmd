@@ -157,11 +157,10 @@ ggplot() +
   geom_density(aes(AgeatDiagnosis, fill = "dead_within_2_years"), alpha = .2, data = data0) +
   geom_density(aes(AgeatDiagnosis, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
   scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
-  
+```
 #MARY
   
 #GUA
   
 #CHI
-```
 
