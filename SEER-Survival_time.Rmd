@@ -1,0 +1,15 @@
+---
+title: "SEER-Survival time"
+author: "Group 11"
+date: "2021/5/3"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+data<-read.csv(file="seer_data_full.csv")
+```
+
