@@ -182,7 +182,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 
-seer_data_fullm <- read_csv("C:/Users/49431/Downloads/seer_data_full.csv")
+seer_data_fullm <- read_csv("seer_data_full.csv")
 head(seer_data_fullm)
 ```
 #### check the summary data for the data structure
@@ -269,7 +269,7 @@ Shown in below is a correlation map for the  data that describes the relationshi
 ```{r heatmap}
 
 
-df_53 <- read_csv("C:/Users/49431/Downloads/df_53.csv")
+df_53 <- read_csv("seer_data_delete.csv")
 head(df_53)
 
 df_53 = df_53%>% mutate_if(is.character,as.factor)
