@@ -17,6 +17,7 @@ library(scales)
 data<-read.csv(file="seer_data_full.csv")
 ```
 
+#EDA
 ```{r}
 #EDA
 
