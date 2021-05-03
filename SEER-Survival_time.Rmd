@@ -90,10 +90,10 @@ data1<-data%>%filter(survive2y==1)
 
 #race
 ggplot(data0, aes(Race.x))+
-  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
 
 ggplot(data1, aes(Race.x))+
-  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
 
 #size
 ggplot() +
@@ -148,14 +148,20 @@ ggplot(plotdata1,
 
 #age
 ggplot(data0, aes(age_range))+
-  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
 
 ggplot(data1, aes(age_range))+
-  geom_bar(aes(fill=as.factor(`SurgeryPerformed?`)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
 
 ggplot() +
   geom_density(aes(AgeatDiagnosis, fill = "dead_within_2_years"), alpha = .2, data = data0) +
   geom_density(aes(AgeatDiagnosis, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
   scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
+  
+  # MARY
+  
+  # GUA
+  
+  # CHI
 ```
 
