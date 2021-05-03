@@ -11,6 +11,11 @@ library(tidyverse)
 library(ggplot2)
 library(dplyr)
 library(scales)
+library(readxl)
+library(keras)
+library(rsample)
+library(tensorflow)
+library(caret)
 ```
 
 ```{r}
@@ -157,10 +162,74 @@ ggplot() +
   geom_density(aes(AgeatDiagnosis, fill = "dead_within_2_years"), alpha = .2, data = data0) +
   geom_density(aes(AgeatDiagnosis, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
   scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
+
+ggplot(data, aes(x=Site.x, y=Size.x, fill=Site.x)) + geom_jitter(aes(colour=Site.x,alpha=0.5),shape=16, position=position_jitter(0.2)) + geom_boxplot(aes(alpha=0.5),outlier.shape = NA)+ stat_summary(fun.y=mean, colour="black", geom="point", hape=18, size=2,show_guide = FALSE)+ stat_summary(fun.y=mean, colour="black", geom="text", show_guide = FALSE, vjust=-0.7, aes( label=round(..y.., digits=1)))+xlab("Disease Site")+   geom_text(data = data, aes(label = count,x = Site.x, y = 100))
 ```
 #MARY
   
 #GUA
   
 #CHI
+ ```{r}
+datac <- data%>%mutate_if(is.character,as.factor)
+datac <- as.data.frame(datac)
+data_new <- sapply(datac,unclass)%>%as.data.frame()
+
+set.seed(100)
+train_test_split <- initial_split(data_new, prop = 0.7)
+trainc <- training(train_test_split)
+testc  <- testing(train_test_split) 
+train_yc <- as.matrix(trainc["survive2y"])
+test_yc <- as.matrix(testc["survive2y"])
+train_xc <- as.matrix(trainc[,-47])
+train_xc <-scale(train_xc)
+test_xc <- as.matrix(testc[,-47])
+test_xc <-scale(test_xc)
+```
+
+```{r}
+set_random_seed(42)
+one_hot_train_labels <- to_categorical(train_yc)
+one_hot_test_labels <- to_categorical(test_yc)
+head(one_hot_train_labels)
+model <- keras_model_sequential() %>%
+  layer_dense(units = 256, activation = "relu",input_shape = ncol(train_xc)) %>%
+  layer_dropout(rate = 0.6) %>%
+  layer_dense(units = 128, activation = "relu") %>%
+  layer_dense(units = ncol(one_hot_train_labels), activation = "sigmoid")
+
+model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+history <-model %>% fit(train_xc, one_hot_train_labels, epochs = 100,batch_size = 512, validation_split = 0.2)
+plot(history)
+```
+
+```{r}
+set_random_seed(42)
+model1 <- keras_model_sequential() %>%
+  layer_dense(units = 256, activation = "relu",input_shape = ncol(train_xc)) %>%
+ layer_dropout(rate = 0.6) %>%
+  layer_dense(units = 128, activation = "relu") %>%
+  layer_dense(units = 2, activation = "sigmoid")
+
+model1 %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+history1 <-model1 %>% fit(train_xc, one_hot_train_labels, epochs = 65,batch_size = 512)
+results <- model1 %>% evaluate(test_xc, one_hot_test_labels)
+results
+plot(history1)
+```
+
+```{r}
+predc <-model1%>%predict(test_xc)%>%round()
+confusionMatrix(as.factor(predc),as.factor(one_hot_test_labels))
+```
 
