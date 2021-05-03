@@ -16,6 +16,8 @@ library(keras)
 library(rsample)
 library(tensorflow)
 library(caret)
+library(naniar)
+library(knitr)
 ```
 
 ```{r}
@@ -245,7 +247,7 @@ str(datam)
 First We conduct basic data preprocessing. Missing values for dataset are shown in the histogram below.
 
 ```{r check_missings}
-library(naniar)
+
 datam[datam == "?"] = NA
 # observations contains NA
 
@@ -441,7 +443,7 @@ table8 = table(p_lg_value, testm$survive2y)
 rownames(table8) = c('Predicted 0','Predicted 1')
 colnames(table8) = c('Actual 0', 'Actual 1')
 
-library(knitr)
+
 kable(table8)
 
 error.lg = sum(p_lg_value!=testm$survive2y)/length(p_lg)
