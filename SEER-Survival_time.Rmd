@@ -655,15 +655,16 @@ datac <- data%>%mutate_if(is.character,as.factor)
 datac <- as.data.frame(datac)
 data_new <- sapply(datac,unclass)%>%as.data.frame()
 
+
 set.seed(100)
 train_test_split <- initial_split(data_new, prop = 0.7)
 trainc <- training(train_test_split)
 testc  <- testing(train_test_split) 
 train_yc <- as.matrix(trainc["survive2y"])
 test_yc <- as.matrix(testc["survive2y"])
-train_xc <- as.matrix(trainc[,-47])
+train_xc <- as.matrix(trainc[,-c(1,2,45,47)])
 train_xc <-scale(train_xc)
-test_xc <- as.matrix(testc[,-47])
+test_xc <- as.matrix(testc[,-c(1,2,45,47)])
 test_xc <-scale(test_xc)
 ```
 
@@ -702,7 +703,7 @@ model1 %>% compile(
   metrics = c("accuracy")
 )
 
-history1 <-model1 %>% fit(train_xc, one_hot_train_labels, epochs = 65,batch_size = 512)
+history1 <-model1 %>% fit(train_xc, one_hot_train_labels, epochs = 20,batch_size = 512)
 results <- model1 %>% evaluate(test_xc, one_hot_test_labels)
 results
 plot(history1)
