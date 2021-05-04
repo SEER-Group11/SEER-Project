@@ -454,11 +454,13 @@ kable(table8)
 error.lg = sum(p_lg_value!=testm$survive2y)/length(p_lg)
 1-error.lg
 
+
 ```  
 #GUA
-
+ ```{r}
 data <- read.csv("seer_data_full.csv")
 # xgboost(binary)
+
 # preprocessing
 data <- select(data,-c(1,2,27,45,40,29))
 anumeric <- data[,c(3,7,8,9,10,11,12,13)]
@@ -468,19 +470,21 @@ afactor <- data[,-c(3,7,8,9,10,11,12,13)]
 adummies <- as.data.frame(model.matrix(~.-1, afactor)) %>% 
   select(-217)
 combined <- cbind(adummies,anumeric)
- 
+  
+
 # split test and train
 numberOfTrainingSamples <- round(nrow(combined) * .7)
 
 train_data <- combined[1:numberOfTrainingSamples,]
 test_data <- combined[-(1:numberOfTrainingSamples),]
 
-label_train <- a$survive2y[1:numberOfTrainingSamples]
-label_test <- a$survive2y[-(1:numberOfTrainingSamples)]
+label_train <- data$survive2y[1:numberOfTrainingSamples]
+label_test <- data$survive2y[-(1:numberOfTrainingSamples)]
 
 # put our testing & training data into two seperates Dmatrixs objects
 dtrain <- xgb.DMatrix(data = as.matrix(train_data), label= label_train)
 dtest <- xgb.DMatrix(data = as.matrix(test_data))
+
 
 model <- xgboost(data = dtrain, # the data   
                  nround = 300, # max number of boosting iterations
@@ -490,9 +494,8 @@ pred <- predict(model, dtest)
 err <- mean(as.numeric(pred > 0.5) != label_test)
 table(pred,label_test)
 print(paste("test-error=", err))
-  
-  
-  
+```  
+
   
 #CHI
  ```{r}
