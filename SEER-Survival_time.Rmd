@@ -41,10 +41,14 @@ data<-read.csv(file="seer_data_full.csv")
 #median month
 data %>% 
 group_by(Site.x) %>% 
-summarise(AverageSurvivalMonth = median(Survival.months)) %>% 
-  ggplot(aes(factor(Site.x), AverageSurvivalMonth, label=AverageSurvivalMonth, fill=factor(Site.x))) +
+summarise(MedianSurvivalMonth = median(Survival.months)) %>% 
+  ggplot(aes(factor(Site.x), MedianSurvivalMonth, label=MedianSurvivalMonth, fill=factor(Site.x))) +
   geom_col() +
-  geom_text(nudge_y = 0.5)
+  geom_text(nudge_y = 0.5)+
+  labs(x = "Site", 
+       title  = "Median survival month for each site")+
+  theme_bw()
+
 
 #REGION
 ggplot(data, 
@@ -53,19 +57,35 @@ ggplot(data,
   geom_bar(position = "stack")
 
 ggplot(data, aes(Site.x))+
-  geom_bar(aes(fill=SEERRegistry), position="fill")
+  geom_bar(aes(fill=SEERRegistry), position="fill")+
+  labs(x = "Site", 
+       y="Proportion",
+       title  = "Proportion of SEERRegistry region for each site")+
+  theme_bw()
 
 #AGE
 ggplot(data, aes(Site.x))+
-  geom_bar(aes(fill=age_range), position="fill")
+  geom_bar(aes(fill=age_range), position="fill")+
+  labs(x = "Site", 
+       y="Proportion",
+       title  = "Proportion of age_range for each site")+
+  theme_bw()
 
 #race
 ggplot(data, aes(Site.x))+
-  geom_bar(aes(fill=Race.x), position="fill")
+  geom_bar(aes(fill=Race.x), position="fill")+
+  labs(x = "Site", 
+       y="Proportion",
+       title  = "Proportion of race for each site")+
+  theme_bw()
 
 #survive 2 years
 ggplot(data, aes(Site.x))+
-  geom_bar(aes(fill=as.factor(survive2y)), position="fill")
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "Site", 
+       y="Proportion",
+       title  = "Proportion of people survive within vs.over 2 years for each site")+
+  theme_bw()
 
 ggplot(data, aes(Race.x))+
   geom_bar(aes(fill=as.factor(survive2y)), position="fill")
@@ -78,11 +98,19 @@ ggplot(data, aes(size_range))+
 
 ggplot(data,aes(x=Size.x,fill=as.factor(survive2y),color=as.factor(survive2y),group=as.factor(survive2y)))+
   geom_histogram(aes(y = ..density..), alpha = 0.4,position = position_dodge())+
-  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F) 
+  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F) +
+  labs(x = "Tumor Size", 
+       y="Density",
+       title  = "Tumor size influence on survival time")+
+  theme_bw()
 
 ggplot(data,aes(x=AgeatDiagnosis,fill=as.factor(survive2y),color=as.factor(survive2y),group=as.factor(survive2y)))+
   geom_histogram(aes(y = ..density..), alpha = 0.4,position = position_dodge())+
-  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F)
+  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F)+
+   labs(x = "Age at diagnosis", 
+       y="Density",
+       title  = "Age influence on survival time")+
+  theme_bw()
 
 #DISCRIMIMATION
 data$surgery_recommendation<-ifelse(data$Surgery.Decision=="Not recommended"|data$Surgery.Decision=="Not recommended, contraindicated due to other cond; autopsy only (1973-2002)",0,1)
@@ -98,18 +126,80 @@ ggplot(plotdata, aes(Race.x,pct,fill=as.factor(surgery_recommendation)))+
            position = "fill") +
   geom_text(aes(label = lbl), 
             size = 3, 
-            position = position_stack(vjust = 0.5))
+            position = position_stack(vjust = 0.5))+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Percentage of surgery recommendation by race")+
+  theme_bw()+coord_flip()
 
 ##less than 2 years compare more than 2 years
 data0<-data%>%filter(survive2y==0)
 data1<-data%>%filter(survive2y==1)
 
 #race
+#surgery
 ggplot(data0, aes(Race.x))+
-  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Surgery decision for people in different race died within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))
+  
 
 ggplot(data1, aes(Race.x))+
-  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Surgery decision for people in different race survive more than 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))
+
+#radiation
+ggplot(data0, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Radiation.x)), position="fill")+
+  labs(x = "Radiation Decision", 
+       y="Proportion",
+       title  = "Radiation decision for people in different race died within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))
+  
+
+ggplot(data1, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Radiation.x)), position="fill")+
+  labs(x = "Radiation Decision", 
+       y="Proportion",
+       title  = "Radiation decision for people in different race survive over 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))
+
+#chemotherapy
+ggplot(data0, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Chemotherapy.x)), position="fill")+
+  labs(x = "Chemotherapy Decision", 
+       y="Proportion",
+       title  = "Chemotherapy decision for people in different race died within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 12))
+
+ggplot(data1, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Chemotherapy.x)), position="fill")+
+  labs(x = "Chemotherapy Decision", 
+       y="Proportion",
+       title  = "Chemotherapy decision for people in different race survive over 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 12))
+
+
+
+ggplot(data0, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Surgery decision for people in different race dead within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))
+  
+
+ggplot(data1, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Surgery decision for people in different race survive over 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))
 
 #size
 ggplot() +
@@ -121,8 +211,21 @@ ggplot() +
 ggplot() +
   geom_bar(aes(Sex.x, fill = "dead_within_2_years",color="black"), alpha = .2, data = data0) +
   geom_bar(aes(Sex.x, fill = "survive_more_than_2_years",color="black"), alpha = .2, data = data1) +
-  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))+
+  labs(x = "Sex", 
+       y="count",
+       title  = "Sex impact on survival time")+
+  theme_bw()
 
+#radiation
+ggplot() +
+  geom_bar(aes(Radiation.x, fill = "dead_within_2_years",color="black"), alpha = .2, data = data0) +
+  geom_bar(aes(Radiation.x, fill = "survive_more_than_2_years",color="black"), alpha = .2, data = data1) +
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))+
+  labs(x = "Radiation Decision", 
+       y="count",
+       title  = "Radiation impact on survival time")+
+  theme_bw()
 #region
 plotdata <- data0 %>%
   count(SEERRegistry) %>%
@@ -141,7 +244,8 @@ ggplot(plotdata,
   scale_y_continuous(labels = percent) +
   labs(x = "Region", 
        y = "Percent", 
-       title  = "Percent by region")
+       title  = "Percent by region for people died within 2 years")+
+  theme_bw()
 
 plotdata1 <- data1 %>%
   count(SEERRegistry) %>%
@@ -160,22 +264,66 @@ ggplot(plotdata1,
   scale_y_continuous(labels = percent) +
   labs(x = "Region", 
        y = "Percent", 
-       title  = "Percent by region")
+       title  = "Percent by region for people survive more than 2 years")+
+  theme_bw()
 
 #age
 ggplot(data0, aes(age_range))+
-  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "age stage", 
+       y = "Percent", 
+       title  = "Surgery decision for people in different age stage died within 2 years")+
+  theme_bw()+coord_flip()
 
 ggplot(data1, aes(age_range))+
-  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "age stage", 
+       y = "Percent", 
+       title  = "Surgery decision for people in different age stage survive over 2 years")+
+  theme_bw()+coord_flip()
 
 ggplot() +
   geom_density(aes(AgeatDiagnosis, fill = "dead_within_2_years"), alpha = .2, data = data0) +
   geom_density(aes(AgeatDiagnosis, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
   scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))
 
-ggplot(data, aes(x=Site.x, y=Size.x, fill=Site.x)) + geom_jitter(aes(colour=Site.x,alpha=0.5),shape=16, position=position_jitter(0.2)) + geom_boxplot(aes(alpha=0.5),outlier.shape = NA)+ stat_summary(fun.y=mean, colour="black", geom="point", hape=18, size=2,show_guide = FALSE)+ stat_summary(fun.y=mean, colour="black", geom="text", show_guide = FALSE, vjust=-0.7, aes( label=round(..y.., digits=1)))+xlab("Disease Site")+   geom_text(data = data, aes(label = count,x = Site.x, y = 100))
+#insurance and race
+ggplot(data, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Insurance.x)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Percentage of insurance type by race")+
+  theme_bw()+coord_flip()
+
+#insurance and surgery performed
+ggplot(data, aes(Insurance.x))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Insurance Type", 
+       y="Proportion",
+       title  = "Surgery decision by insurance type")+
+  theme_bw()
+
+#median household income
+ggplot(data,aes(factor(survive2y),MedianHouseholdIncome))+geom_boxplot()+labs(x="survive within/over 2 years",title="Median household income vs. survival time")+theme_bw()
+
+#AJCC7Stage
+ggplot(data, aes(AJCC7Stage))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "AJCC 7 Stages", 
+       y="Proportion",
+       title  = "Survival rate(2 years) by AJCC 7 Stages")+
+  theme_bw()
+
+#Node
+ggplot(data, aes(LymphNodes))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "LymphNodes", 
+       y="Proportion",
+       title  = "Survival rate(2 years) by LymphNodes")+
+  theme_bw()
 ```
+
+
 #MARY
 
 # MARY EDA
