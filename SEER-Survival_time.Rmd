@@ -1,5 +1,5 @@
 ---
-title: "SEER-Survival time"
+title: "SEER-Project Survival Prediction"
 author: "Group 11"
 date: "2021/5/3"
 output: pdf_document
