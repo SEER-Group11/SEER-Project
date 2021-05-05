@@ -479,6 +479,9 @@ To build classification models, we split dataset into training and testing datas
 
 
 ```{r}
+datam = select(datam,-c(1,2,27,45,40,29))
+
+head(datam)
 datam = select(datam,-c(8,9,10,11,16))
 smp_size <- floor(0.7 * nrow(datam))
 
