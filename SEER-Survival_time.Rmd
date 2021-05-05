@@ -615,13 +615,11 @@ error.lg = sum(p_lg_value!=testm$survive2y)/length(p_lg)
 ```  
 #GUA
  ```{r}
-data <- read.csv("seer_data_full.csv")
 # xgboost(binary)
-
 # preprocessing
-data <- select(data,-c(1,2,27,45,40,29))
-anumeric <- data[,c(3,7,8,9,10,11,12,13)]
-afactor <- data[,-c(3,7,8,9,10,11,12,13)]
+data_x <- select(data,-c(1,2,27,45,40,29))
+anumeric <- data_x[,c(3,7,8,9,10,11,12,13)]
+afactor <- data_x[,-c(3,7,8,9,10,11,12,13)]
 
 # one-hot coding
 adummies <- as.data.frame(model.matrix(~.-1, afactor)) %>% 
@@ -643,13 +641,13 @@ dtrain <- xgb.DMatrix(data = as.matrix(train_data), label= label_train)
 dtest <- xgb.DMatrix(data = as.matrix(test_data))
 
 
-model <- xgboost(data = dtrain, # the data   
+model_x <- xgboost(data = dtrain, # the data   
                  nround = 300, # max number of boosting iterations
                  objective = "binary:hinge")
 
-pred <- predict(model, dtest)
-err <- mean(as.numeric(pred > 0.5) != label_test)
-table(pred,label_test)
+pred_x <- predict(model_x, dtest)
+err <- mean(as.numeric(pred_x > 0.5) != label_test)
+table(pred_x,label_test)
 print(paste("test-error=", err))
 ```  
 
