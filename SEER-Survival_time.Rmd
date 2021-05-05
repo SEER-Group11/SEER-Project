@@ -642,7 +642,7 @@ dtest <- xgb.DMatrix(data = as.matrix(test_data))
 
 
 model_x <- xgboost(data = dtrain, # the data   
-                 nround = 300, # max number of boosting iterations
+                 nround = 200, # max number of boosting iterations
                  objective = "binary:hinge")
 
 pred_x <- predict(model_x, dtest)
