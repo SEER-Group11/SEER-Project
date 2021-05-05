@@ -479,6 +479,7 @@ To build classification models, we split dataset into training and testing datas
 
 
 ```{r}
+datam = select(datam,-c(8,9,10,11,16))
 smp_size <- floor(0.7 * nrow(datam))
 
 ## set the seed to make partition reproducible
@@ -487,6 +488,7 @@ train_ind <- sample(seq_len(nrow(datam)), size = smp_size)
 
 trainm <- datam[train_ind, ]
 testm <- datam[-train_ind, ]
+
 ```
 
 
