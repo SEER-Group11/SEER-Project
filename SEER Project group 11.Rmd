@@ -1,0 +1,641 @@
+---
+title: "SEER Project-Survival time analysis(2 years)"
+author: "Group 11: Chi Zhang, Aoyi Li, Simu Huang, Zixuan Liu"
+date: "2021/5/5"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    fig_caption: yes        
+    includes:  
+      in_header: 123.tex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(readxl)
+library(rpart)
+library(rpart.plot)
+library(plotmo)
+library(tree)
+library(ipred)
+library(rsample)
+library(caret)
+library(keras)
+library(gridExtra)
+library(reshape2)
+library(tensorflow)
+library(naniar)
+library(knitr)
+library(readr)
+library(stats)
+library(magrittr)
+library(xgboost)
+```
+
+
+```{r, echo=FALSE,warning=FALSE}
+data<-read.csv(file="seer_data_full.csv")
+```
+
+\vspace{24pt}
+# Introduction
+
+Over the recent years, there has been an explosion in the use of machine learning to be applied in our real life, especially in the public domain and business to predict behaviors and investment decisions. In the clinical area, machine learning can also be used to predict the survival time of the cancer patients, which will greatly benefit early diagnosis, clinical management of cancer patients, and treatment adjustment. 
+
+In this project, we mainly focus on the factors that affect the survival time of the head and neck cancer patients after diagnosis and use machine learning methods to predict whether head and neck cancer patients will survive longer than two years after being diagnosed. Besides, what we notice was that in the data, the average survival time of the patients is greater than two years. We will also try to identify the factors that affect the survival of patients less than two years after diagnosis and do some descriptive research by EDA to find the relationship between these variables.
+
+
+\vspace{36pt}
+# Data Processing
+
+
+The Surveillance, Epidemiology, and End Results (SEER) Program provides information on cancer statistics in an effort to reduce the cancer burden among the U.S. population. The raw data of all head and neck cancer has many missing values, but it has the column survival_month, our target variable. We also have two other files containing the information which raw data does not have. To make sure we can use all necessary information at once, we merged raw data with two other datasets by study ID. What is more, we extracted the data only from 2010 to 2014, since the data before 2010 has many blanks and the data after 2014 is not sufficient for our 2 years survival analysis. 
+
+To better perform our models, we transferred all factor variables into numeric. We also split the data into two parts that 70% as training data and 30% as testing data. We will train our models on training data and test the validation on testing data later on.
+
+\newpage
+# EDA
+## Heatmap Plot
+Shown in below is a correlation map for the seer data that describes the relationship between the different features. 
+
+```{r heatmap, echo=FALSE,warning=FALSE,message=FALSE,fig.height=8,fig.width=8}
+df_53 <- read_csv("seer_data_delete.csv")
+df_53 = df_53%>% mutate_if(is.character,as.factor)
+df_53= as.data.frame(df_53)
+df_53 = sapply(df_53,unclass)%>%as.data.frame()
+#heatmap plot year3
+temp3 = df_53[2:34]
+cormat <- round(cor(temp3),2)
+melted_cormat <- melt(cormat)
+  # Get upper triangle of the correlation matrix
+  get_upper_tri <- function(cormat){
+    cormat[lower.tri(cormat)]<- NA
+    return(cormat)
+  }
+upper_tri <- get_upper_tri(cormat)
+# Melt the correlation matrix
+melted_cormat <- melt(upper_tri, na.rm = TRUE)
+# Create a ggheatmap
+ ggheatmap <- ggplot(melted_cormat, aes(Var2, Var1, fill = value))+
+ geom_tile(color = "white")+
+ scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+    name="Pearson\nCorrelation") +
+  theme_minimal()+ # minimal theme
+ theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+    size = 12, hjust = 1))+
+ coord_fixed() + ggtitle("seer_data")
+# Print the heatmap
+aa = ggheatmap + 
+theme(axis.text.x = element_text(size=4),
+      axis.text.y = element_text(size=4),
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  legend.justification = c(1, 0),
+  legend.position = c(0.6, 0.7),
+  legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                title.position = "top", title.hjust = 0.5)) +
+  scale_y_discrete(position = "right")+theme(axis.text.x = element_text(size = 6))+theme(axis.text.y = element_text(size = 6))
+aa
+#ggsave(aa,file="aa.png")
+```
+From the correlation heatmap, we can see that there is some high correlation between variables. There could exist collinearity which may affect modeling. From the plot that the variable person below poverty and median household income have high negative correlation. That makes sense since people with lower incomes are poorer. We also noticed that few variables have high positive correlation. For example, the variable surgery decision and surgery primary site, which can explain the correlation that if as the bigger the tumor, the more likely people are to undergo surgery.
+
+
+## Interesting Findings
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=7.3}
+#site vs. race
+p1<-ggplot(data, aes(Site.x))+
+geom_bar(aes(fill=Race.x), position="fill")+
+labs(x = "Site", 
+        y="Proportion",
+       title  = "Proportion of race for each site")+
+   theme_bw()+theme(axis.text.x = element_text(size = 6))
+ 
+#site vs. AGE
+p2<-ggplot(data, aes(Site.x))+
+   geom_bar(aes(fill=age_range), position="fill")+
+   labs(x = "Site", 
+        y="Proportion",
+        title  = "Proportion of age_range for each site")+
+   theme_bw()+theme(axis.text.x = element_text(size = 7))
+ 
+grid.arrange(p1, p2)
+```
+
+For the 2 plots above, we found that the site called Nasopharynx is obviously different from other sites. From the plot at the top, it is clear that Asian or Pacific Islander people are more likely to have Nasopharynx cancer than other races, and white people are less likely to have this cancer compared to other races. From the plot at the bottom, we can see that adults (age from 21-50) are more likely to have Nasopharynx cancer than other age stages. Then we found out that this is not the exceptional case happened in our dataset. There are some researches show that Asian or Pacific Islander people are more likely to have Nasopharynx cancer than other races.
+
+
+
+## Survive within/over 2 years
+```{r,echo=FALSE,message=FALSE,fig.height=7.2}
+#median month
+p3<-data %>% 
+group_by(Site.x) %>% 
+summarise(MedianSurvivalMonth = median(Survival.months)) %>% 
+  ggplot(aes(factor(Site.x), MedianSurvivalMonth, label=MedianSurvivalMonth, fill=factor(Site.x))) +
+  geom_col() +
+  geom_text(nudge_y = 0.5)+
+  labs(x = "Site", 
+       title  = "Median survival month for each site")+
+  theme_bw()+theme(axis.text.x = element_text(size = 7))+theme(plot.title = element_text(hjust=0.5))
+
+#survive 2 years
+p4<-ggplot(data, aes(Site.x))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "Site", 
+       y="Proportion",
+       title  = "Proportion of people survive within vs.over 2 years for each site")+
+  theme_bw()+theme(axis.text.x = element_text(size = 7))+theme(plot.title = element_text(hjust=0.5))
+
+grid.arrange(p3, p4)
+```
+
+We plotted the median survival months for each site, which shows that almost all cancers here have median survival months more than 2 years. Thus, we would like to predict whether a person can survive over 2 years or not after diagnosis. And further understand that if there is any similarity of people who died within 2 years. Both 2 plots above show that people who have Hypopharynx cancer have the lowest survival time and they are most likely to die within 2 years.
+
+
+```{r,echo=FALSE,message=FALSE,fig.height=7.5}
+#density plots
+p5<-ggplot(data,aes(x=Size.x,fill=as.factor(survive2y),color=as.factor(survive2y),group=as.factor(survive2y)))+
+  geom_histogram(aes(y = ..density..), alpha = 0.4,position = position_dodge())+
+  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F) +
+  labs(x = "Tumor Size", 
+       y="Density",
+       title  = "Tumor size influence on survival time")+
+  theme_bw()
+
+p6<-ggplot(data,aes(x=AgeatDiagnosis,fill=as.factor(survive2y),color=as.factor(survive2y),group=as.factor(survive2y)))+
+  geom_histogram(aes(y = ..density..), alpha = 0.4,position = position_dodge())+
+  geom_line(aes(y = ..density..,), stat = 'density',show.legend = F)+
+   labs(x = "Age at diagnosis", 
+       y="Density",
+       title  = "Age influence on survival time")+
+  theme_bw()
+
+grid.arrange(p5, p6)
+```
+
+These 2 density plots show influences of tumor size and age on survival time. When tumor sizes are less than 30, people are more likely to survive more than 2 years. However, when sizes are greater than 30, people are more likely to die within 2 years. For the age plot, the differences between ages are not that clear.  People who are in or older than the mature adulthood stage have a larger chance to die within 2 years compared to younger people.
+
+```{r,echo=FALSE,fig.height=7.5}
+##less than 2 years compare more than 2 years
+data0<-data%>%filter(survive2y==0)
+data1<-data%>%filter(survive2y==1)
+
+#race/surgery
+p7<-ggplot(data0, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Surgery decision for people in different race died within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))+theme(plot.title = element_text(hjust=0.5))
+  
+
+p8<-ggplot(data1, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Surgery decision for people in different race survive more than 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))+theme(plot.title = element_text(hjust=0.5))
+
+grid.arrange(p7, p8)
+```
+
+Then we would like to check if surgery performance is a significant factor that affects survival time. By comparing these 2 plots, we can clearly see the influence of surgery. It is clear that more than half of people who died within 2 years did not have surgery. For people who survive more than 2 years, a large proportion of them chose to do surgery. Thus, we can conclude that surgery performance should be an important factor. 
+
+\newpage
+# Model Selection and Validation
+
+## Logistic Regression
+
+```{r,echo=FALSE,include=FALSE,result='hide'}
+seer_data_fullm <- data
+head(seer_data_fullm)
+
+summary(seer_data_fullm)
+str(seer_data_fullm)
+```
+
+```{r,echo=FALSE}
+datam = seer_data_fullm%>% mutate_if(is.character,as.factor)
+datam= as.data.frame(datam)
+datam = sapply(datam,unclass)%>%as.data.frame()
+
+datam = select(datam,-c(1,2,27,45,40,29))
+#head(datam)
+datam = select(datam,-c(8,9,10,11,16))
+smp_size <- floor(0.7 * nrow(datam))
+## set the seed to make partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(datam)), size = smp_size)
+trainm <- datam[train_ind, ]
+testm <- datam[-train_ind, ]
+```
+
+We first tried with logistic regression to do the prediction. Logistic regression is a generalized linear model. It can be used to classify a binary dependent variable. In our case, it's to classify 0 and 1 which represent patients who have survived less than 24 month or more than 24 month.
+We did model selection before running into the final model for the logistic regression. We first conducted a model containing all the variables and looked into the summary, took out a few variables that had high p-value and refit the model. For example, we took out education level since we don’t think education level has an effect on our predictor and it also has high p-value. After model selection, we improved 0.3511% of our accuracy.
+
+Our final model is written as:
+```{r}
+## make the model with Logistic 
+lg<-glm(survive2y~.,family=binomial(link='logit'),data=trainm)
+```
+```{r,echo=FALSE}
+V = caret::varImp(lg)
+ggplot2::ggplot(V, aes(x=reorder(rownames(V),Overall), y=Overall)) +
+geom_point( color="blue", size=4, alpha=0.6)+
+geom_segment( aes(x=rownames(V), xend=rownames(V), y=0, yend=Overall), 
+color='skyblue') +
+xlab('Variable')+
+ylab('Overall Importance')+
+theme_light() +
+coord_flip() 
+```
+The plot above shows the importance of variables in logistic regression model. We find the year of Diagnosis is the most important one, vital status and race come after. Based on this plot we tried different combinations of variables to improve our model. 
+
+## XGBoost
+```{r,include=FALSE}
+# xgboost(binary) 
+# preprocessing 
+data_x <- select(data,-c(1,2,27,45,40,29)) 
+anumeric <- data_x[,c(3,7,8,9,10,11,12,13)] 
+afactor <- data_x[,-c(3,7,8,9,10,11,12,13)]
+```
+
+```{r}
+# one-hot coding 
+adummies <- as.data.frame(model.matrix(~.-1, afactor)) %>%  
+select(-217) 
+combined <- cbind(adummies,anumeric) 
+# split test and train 
+numberOfTrainingSamples <- round(nrow(combined) * .7) 
+train_data <- combined[1:numberOfTrainingSamples,] 
+test_data <- combined[-(1:numberOfTrainingSamples),] 
+label_train <- data$survive2y[1:numberOfTrainingSamples] 
+label_test <- data$survive2y[-(1:numberOfTrainingSamples)] 
+# put our testing & training data into two seperates Dmatrixs objects 
+dtrain <- xgb.DMatrix(data = as.matrix(train_data), label= label_train) 
+dtest <- xgb.DMatrix(data = as.matrix(test_data)) 
+```
+
+We also try to use XGBoost to predict whether patients can survive more than two years after diagnosis. XGBoost(Extreme Gradient Boosting) is a tree-based integrated machine learning algorithm especially where speed and accuracy are concerned. The reason we consider using this algorithm for prediction is that there are a large number of observations and many classification features in the data. 
+After cleaning the data, we convert the categorical variables into numeric using one hot encoding and use xgb.DMatrix to convert the data table into a matrix. XGBoost model needs parameter adjustment to improve its performance. We use the default booster type “gbtree” to help us solve the classification problem. Meanwhile, when the value of “nround” is greater than 200, the accuracy of this model is not significantly improved. Thus, we set “nround” equals 200 in this function, which means that the algorithm will generate 200 decision trees in the final model. 
+
+The function is written as:
+
+```{r,results='hide'}
+#Xgboost Model
+model_x <- xgboost(data = dtrain, # the data  
+nround = 200, # max number of boosting iterations 
+objective = "binary:hinge")
+```
+
+
+## Multi-layer Perceptron
+
+After trying some regular machine learning models, we train a multi -layer perceptron(MLP) model on our dataset to see if we can improve the prediction accuracy.  MLP utilizes a supervised learning technique called backpropagation for training. Its multiple layers and non-linear activation distinguish MLP from a linear perceptron. It can distinguish data that is not linearly separable.
+To apply the MLP model, we transferred all factor variables into numbers. After that, we normalized everything with the same scale, which helps our model train the data more easily.
+I set “adam”, “binary_crossentropy”, and “accuracy”my optimizer, loss function, and metric. I fit the model with validation 0.2 that 20% of the train will be selected for validation, and set epochs with 100.
+
+```{r,echo=FALSE,message=FALSE}
+datac <- data%>%mutate_if(is.character,as.factor)
+datac <- as.data.frame(datac)
+data_new <- sapply(datac,unclass)%>%as.data.frame()
+
+set.seed(100)
+train_test_split <- initial_split(data_new, prop = 0.7)
+trainc <- training(train_test_split)
+testc  <- testing(train_test_split) 
+train_yc <- as.matrix(trainc["survive2y"])
+test_yc <- as.matrix(testc["survive2y"])
+train_xc <- as.matrix(trainc[,-c(1,2,45,47)])
+train_xc <-scale(train_xc)
+test_xc <- as.matrix(testc[,-c(1,2,45,47)])
+test_xc <-scale(test_xc)
+```
+
+```{r,message=FALSE}
+set_random_seed(43)
+one_hot_train_labels <- to_categorical(train_yc)
+one_hot_test_labels <- to_categorical(test_yc)
+model <- keras_model_sequential() %>%
+  layer_dense(units = 256, activation = "relu",input_shape = ncol(train_xc)) %>%
+  layer_dropout(rate = 0.6) %>%
+  layer_dense(units = 128, activation = "relu") %>%
+  layer_dense(units = ncol(one_hot_train_labels), activation = "sigmoid")
+
+model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+history <-model %>% fit(train_xc, one_hot_train_labels, epochs = 100,
+batch_size = 512, validation_split = 0.2)
+plot(history)
+```
+The graph above shows the loss and accuracy over 100 epochs. As we can see, the training loss decreases with every epoch, and training accuracy increases with each epoch. However, the validation loss goes down and then goes up. To avoid overfitting, we should stop training before the validation loss increases. Therefore, we will stop our model at epochs 20 (0.4345).
+
+```{r,echo=FALSE,fig.height=6}
+set_random_seed(43)
+model1 <- keras_model_sequential() %>%
+  layer_dense(units = 256, activation = "relu",input_shape = ncol(train_xc)) %>%
+  layer_dropout(rate = 0.6) %>%
+  layer_dense(units = 128, activation = "relu") %>%
+  layer_dense(units = ncol(one_hot_train_labels), activation = "sigmoid")
+
+model1 %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+history1 <-model1 %>% fit(train_xc, one_hot_train_labels, epochs = 20,batch_size = 512)
+#results <- model1 %>% evaluate(test_xc, one_hot_test_labels)
+#results
+plot(history1)
+```
+
+\newpage
+# Model Evaluation
+## Logistic
+
+The confusion matrix is shown below:
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+## pred the data with logistic
+p_lg<-predict(lg,testm,type="response")
+p_lg_value<-ifelse(p_lg>=0.5,1,0)
+## make the confusion matrix with logistic
+table8 = table(p_lg_value, testm$survive2y)
+rownames(table8) = c('Predicted 0','Predicted 1')
+colnames(table8) = c('Actual 0', 'Actual 1')
+kable(table8)
+error.lg = sum(p_lg_value!=testm$survive2y)/length(p_lg)
+a = 1-error.lg
+```
+0 and 1 represent patients who have survived less than 24 months or more than 24 months.
+The accuracy calculated based on the above confusion matrix is `r a * 100`%.
+
+
+## Xgboost
+
+The confusion matrix is shown below:
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+pred_x <- predict(model_x, dtest) 
+err <- mean(as.numeric(pred_x > 0.5) != label_test) 
+ 
+table_x = table(pred_x, label_test)
+rownames(table_x) = c('Predicted 0','Predicted 1')
+colnames(table_x) = c('Actual 0', 'Actual 1')
+kable(table_x)
+b = 1-err 
+```
+The accuracy calculated based on the above confusion matrix is `r b * 100`%.
+
+## MLP
+```{r,echo=FALSE}
+predc <-model1%>%predict(test_xc)%>%round()
+confusionMatrix(as.factor(predc),as.factor(one_hot_test_labels))
+```
+It is not easy to perfectly predict whether a patient will survive more than two years or less. Many external factors will lead to the deterioration or improvement of the cancer. In addition, the patient’s internal factors, such as psychological problems, will also directly lead to the change of results. Therefore, these information not recorded in the data cannot be learned by our model.  But, in general, according to our confusion matrix, the validation accuracy of 0.849 is an acceptable number, which is enough to provide doctors reference in the diagnosis of cancer.
+
+# Discussion
+In our project, we use machine learning methods to predict whether patients with head and neck cancer can survive more than two years after diagnosis. In the end, our prediction accuracy rate reached 84.9%. We believe that this kind of prediction can help doctors estimate  the patient’s survival time more quickly in the early stage of diagnosis and then adjust the treatment plan, thereby improving the efficiency of the entire diagnosis and treatment. Finally, the experience of patient consultation will also be improved.
+However, there are still some limitations of our study. There are too many blank values ​​in the original data. If we want to use more variables, we can only use data from 2010 to 2014. This will lead to a reduction in the amount of data we can use, which will affect the accuracy of the forecast. 
+
+
+# Appendix
+## EDA
+```{r,echo=FALSE,message=FALSE,fig.height=4.3}
+#EDA
+
+
+#AJCC7Stage
+ggplot(data, aes(AJCC7Stage))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "AJCC 7 Stages", 
+       y="Proportion",
+       title  = "Survival rate(2 years) by AJCC 7 Stages")+
+  theme_bw()
+
+
+#REGION
+ggplot(data, 
+       aes(x = Site.x, 
+           fill = SEERRegistry)) + 
+  geom_bar(position = "stack")+
+  labs(x = "Site", 
+       y="count",
+       title  = "SEERRegistry region vs. Site")+
+  theme(axis.text.x = element_text(size = 8))
+
+ggplot(data, aes(Site.x))+
+  geom_bar(aes(fill=SEERRegistry), position="fill")+
+  labs(x = "Site", 
+       y="Proportion",
+       title  = "Proportion of SEERRegistry region for each site")+
+  theme_bw()+theme(axis.text.x = element_text(size = 8))
+
+
+#survive 2 years
+
+ggplot(data, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Race effect")+
+  coord_flip()
+
+ggplot(data, aes(age_range))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "age stage", 
+       y="Proportion",
+       title  = "Age effect")+
+  coord_flip()
+
+ggplot(data, aes(size_range))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "Size range", 
+       y="Proportion",
+       title  = "Size effect")+
+  coord_flip()
+
+
+
+#DISCRIMIMATION
+data$surgery_recommendation<-ifelse(data$Surgery.Decision=="Not recommended"|data$Surgery.Decision=="Not recommended, contraindicated due to other cond; autopsy only (1973-2002)",0,1)
+
+plotdata <- data %>%
+  group_by(Race.x, surgery_recommendation) %>%
+  summarize(n = n()) %>% 
+  mutate(pct = n/sum(n),
+         lbl = scales::percent(pct))
+
+ggplot(plotdata, aes(Race.x,pct,fill=as.factor(surgery_recommendation)))+
+  geom_bar(stat = "identity",
+           position = "fill") +
+  geom_text(aes(label = lbl), 
+            size = 3, 
+            position = position_stack(vjust = 0.5))+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Percentage of surgery recommendation by race")+
+  theme_bw()+theme(plot.title = element_text(hjust=0.5))+coord_flip()
+
+
+#race
+#radiation
+ggplot(data0, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Radiation.x)), position="fill")+
+  labs(x = "Radiation Decision", 
+       y="Proportion",
+       title  = "Radiation decision for people in different race died within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))+theme(plot.title = element_text(hjust=0.5))
+  
+
+ggplot(data1, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Radiation.x)), position="fill")+
+  labs(x = "Radiation Decision", 
+       y="Proportion",
+       title  = "Radiation decision for people in different race survive over 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 13))+theme(plot.title = element_text(hjust=0.5))
+
+#chemotherapy
+ggplot(data0, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Chemotherapy.x)), position="fill")+
+  labs(x = "Chemotherapy Decision", 
+       y="Proportion",
+       title  = "Chemotherapy decision for people in different race died within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 12))+theme(plot.title = element_text(hjust=0.5))
+
+ggplot(data1, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Chemotherapy.x)), position="fill")+
+  labs(x = "Chemotherapy Decision", 
+       y="Proportion",
+       title  = "Chemotherapy decision for people in different race survive over 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(size = 12))+theme(plot.title = element_text(hjust=0.5))
+
+
+
+#size/age density(2 datasets)
+ggplot() +
+  geom_density(aes(Size.x, fill = "dead_within_2_years"), alpha = .2, data = data0) +
+  geom_density(aes(Size.x, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))+
+  labs(x = "Tumor Size", 
+       y="Density",
+       title  = "Density plot for tumor size")+theme_bw()
+
+ggplot() +
+  geom_density(aes(AgeatDiagnosis, fill = "dead_within_2_years"), alpha = .2, data = data0) +
+  geom_density(aes(AgeatDiagnosis, fill = "survive_more_than_2_years"), alpha = .2, data = data1) +
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))+
+  labs(x = "Age at diagnosis", 
+       y="Density",
+       title  = "Density plot for age at diagnosis")+theme_bw()
+
+#sex
+ggplot() +
+  geom_bar(aes(Sex.x, fill = "dead_within_2_years",color="black"), alpha = .2, data = data0) +
+  geom_bar(aes(Sex.x, fill = "survive_more_than_2_years",color="black"), alpha = .2, data = data1) +
+  scale_fill_manual(name = "dataset", values = c(survive_more_than_2_years = "red", dead_within_2_years = "green"))+
+  labs(x = "Sex", 
+       y="count",
+       title  = "Sex impact on survival time")+
+  theme_bw()
+
+
+#region
+plotdata <- data0 %>%
+  count(SEERRegistry) %>%
+  mutate(pct = n / sum(n),
+         pctlabel = paste0(round(pct*100), "%"))
+
+
+ggplot(plotdata, 
+       aes(x = reorder(SEERRegistry, -pct),
+           y = pct)) + 
+  geom_bar(stat = "identity", 
+           fill = "indianred3", 
+           color = "black") +
+  geom_text(aes(label = pctlabel), 
+            vjust = -0.25) +
+  scale_y_continuous(labels = percent) +
+  labs(x = "Region", 
+       y = "Percent", 
+       title  = "Percent by region for people died within 2 years")+
+  theme_bw()
+
+plotdata1 <- data1 %>%
+  count(SEERRegistry) %>%
+  mutate(pct = n / sum(n),
+         pctlabel = paste0(round(pct*100), "%"))
+
+
+ggplot(plotdata1, 
+       aes(x = reorder(SEERRegistry, -pct),
+           y = pct)) + 
+  geom_bar(stat = "identity", 
+           fill = "indianred3", 
+           color = "black") +
+  geom_text(aes(label = pctlabel), 
+            vjust = -0.25) +
+  scale_y_continuous(labels = percent) +
+  labs(x = "Region", 
+       y = "Percent", 
+       title  = "Percent by region for people survive more than 2 years")+
+  theme_bw()
+
+#age
+ggplot(data0, aes(age_range))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "age stage", 
+       y = "Percent", 
+       title  = "Surgery decision for people in different age stage died within 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(hjust=0.5))
+
+ggplot(data1, aes(age_range))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "age stage", 
+       y = "Percent", 
+       title  = "Surgery decision for people in different age stage survive over 2 years")+
+  theme_bw()+coord_flip()+theme(plot.title = element_text(hjust=0.5))
+
+
+#insurance and race
+ggplot(data, aes(Race.x))+
+  geom_bar(aes(fill=as.factor(Insurance.x)), position="fill")+
+  labs(x = "Race", 
+       y="Proportion",
+       title  = "Percentage of insurance type by race")+
+  theme_bw()+coord_flip()
+
+#insurance and surgery performed
+ggplot(data, aes(Insurance.x))+
+  geom_bar(aes(fill=as.factor(SurgeryPerformed.)), position="fill")+
+  labs(x = "Insurance Type", 
+       y="Proportion",
+       title  = "Surgery decision by insurance type")+
+  theme_bw()
+
+#Node
+ggplot(data, aes(LymphNodes))+
+  geom_bar(aes(fill=as.factor(survive2y)), position="fill")+
+  labs(x = "LymphNodes", 
+       y="Proportion",
+       title  = "Survival rate(2 years) by LymphNodes")+
+  theme_bw()
+
+#median household income
+ggplot(data,aes(factor(survive2y),MedianHouseholdIncome))+geom_boxplot()+labs(x="survive within/over 2 years",title="Median household income vs. survival time")+theme_bw()
+```
+
